@@ -12,5 +12,6 @@
 
 ## Migration 
 - Couper l'éditeur de sieve actuel ( dans mon cas smartsieve à desactiver de mon serveur apache)
-- Copier tout le dossier sieve du serveur imapd ( /var/lib/imap/sieve/ ) sur le serveur SOGo
-- Depuis le serveur SOGo utiliser parser_sieve_folder.sh pour parcourir le répertoire de sieve et procéder à l'import.
+- Copier tout le dossier sieve du serveur imapd ( cd /var/lib/imap/sieve/ ; zip -r /tmp/all_sieve.zip ./) 
+- sur le serveur SOGo ( scp /tmp/all_sieve.zip root@sogo:/tmp/ ) 
+- Depuis le serveur SOGo editer et utiliser parser_sieve_folder.sh pour parcourir le répertoire de sieve et procéder à l'import.
