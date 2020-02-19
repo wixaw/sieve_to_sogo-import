@@ -9,29 +9,31 @@
 # License: GPLv2
 ################
 
+# On test si le dossier existe, sinon on quit le programme
 PLPATH=`pwd`
-DIR="/var/lib/imap/sieve"
-if [ -d $DIR ]; then
-    cd $DIR
+SIEVEDIR="/opt/oldsieve/"
+if [ -d $SIEVEDIR ]; then
+    cd $SIEVEDIR
 else
     exit;
 fi
 
-
+# MAIN 
+# On boucle sur tous les répertoires a/, b/, c/ ... 
 for initial in * ; do
-    cd $DIR/$initial/
+    cd $SIEVEDIR/$initial/
+    # On boucle sur les répertoires utilisateurs toto/, titi/, tata/ ...
     for user in * ; do
         COUNT="${#user}";
-        # clean 
+        # On clean les répertoires problematiques comme a/a/, b/b/ ...
         if [[ "$COUNT" == "1" ]]; then 
             continue;
         fi
-        # generation de la commande    
+        # Execution de la commande perl 
         if [ -f ${user}/smartsieve.script ]; then
             perl $PLPATH/sieve_to_sogo-import.pl ${user}/smartsieve.script ${user}
         else
             continue;
         fi
     done
-
 done
