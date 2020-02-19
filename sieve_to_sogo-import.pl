@@ -16,13 +16,23 @@
 
 use strict;
 use warnings;
+
+# Pour obtenir le path
+use Cwd;
+use File::Basename;
+my $dirname  = File::Basename::dirname(Cwd::abs_path($0));
+
+# Fonctions def
 sub convert ($);
 sub convertRules ($);
 sub convertAction ($$);
 sub convertActionSingle ($);
+
+# Vars def
 my $sogoSieveVacation = "";
 my $sogoSieveForward = "";
 my $debug = 0;
+my $exec = 0;
 
 ##########################
 # Main 
@@ -30,8 +40,12 @@ if(-e $ARGV[0] && defined $ARGV[1]) {
 
     my $file = $ARGV[0];
     my $user = $ARGV[1];
+
+    print("# Commandes à executer pour $user: \n");
+
     my $sogoSieve = convert($file);
 
+    # Gestion des fichiers
     my $filenameoutsieve = "/tmp/sieveimport/".$user."_sieve.json";
     my $filenameoutvac = "/tmp/sieveimport/".$user."_vacation.json";
     my $filenameoutfor = "/tmp/sieveimport/".$user."_forward.json";
@@ -39,25 +53,54 @@ if(-e $ARGV[0] && defined $ARGV[1]) {
     print $fro "{$sogoSieve}";
     close $fro;
     open(my $fro2, '>', $filenameoutvac) or die "Could not open file '$filenameoutvac' $!";
-    print $fro2 "{$sogoSieveVacation}";
+    print $fro2 "$sogoSieveVacation";
     close $fro2;
     open(my $fro3, '>', $filenameoutfor) or die "Could not open file '$filenameoutfor' $!";
-    print $fro3 "{$sogoSieveForward}";
+    print $fro3 "$sogoSieveForward";
     close $fro3;
 
-    print("\n# Commandes à executer pour $user: \n");
-    print("sogo-tool user-preferences set defaults $user -p root.creds SOGoSieveFilters -f $filenameoutsieve");
-    print("\n");
+    # Affichage des commandes si besoin
+    if ($sogoSieve eq '"SOGoSieveFilters":[]'){    }else {
+
+        print("sogo-tool user-preferences set defaults $user -p root.creds SOGoSieveFilters -f $filenameoutsieve");
+        print("\n");
+        if ($exec eq 1) {
+            system("sogo-tool user-preferences set defaults $user -p $dirname/root.creds SOGoSieveFilters -f $filenameoutsieve");
+            if ($? == -1) {
+                print "failed to execute: $!\n";
+            } else {
+                printf "child exited with value %d\n", $? >> 8;
+                print("\n");
+            }
+        }
+    }
     if ($sogoSieveVacation eq ""){    }else {   
         print("sogo-tool user-preferences set defaults $user -p root.creds Vacation -f $filenameoutvac");
         print("\n");
+        if ($exec eq 1) { 
+            system("sogo-tool user-preferences set defaults $user -p $dirname/root.creds Vacation -f $filenameoutvac");
+            if ($? == -1) {
+                print "failed to execute: $!\n";
+            } else {
+                printf "child exited with value %d\n", $? >> 8;
+                print("\n");
+            }
+        }    
     }
-    
     if ($sogoSieveForward eq ""){    }else {   
         print("sogo-tool user-preferences set defaults $user -p root.creds Forward -f $filenameoutfor");
         print("\n");
+        if ($exec eq 1) { 
+            system("sogo-tool user-preferences set defaults $user -p $dirname/root.creds Forward -f $filenameoutfor");
+            if ($? == -1) {
+                print "failed to execute: $!\n";
+            } else {
+                printf "child exited with value %d\n", $? >> 8;
+                print("\n");
+            }
+        }
     }
-
+    print("\n");
 
 }elsif(-e $ARGV[0]) {
     my $file = $ARGV[0];
@@ -239,14 +282,14 @@ sub convert($) {
         if($row =~ /^vacation :days (.*) :addresses ([^\)]*) text:/) {
             $vacationMode="true";
             if ( $sogoSieveVacation eq "" ) {
-                $sogoSieveVacation = "vacation: {\"daysBetweenResponse\": $1, \"enabled\": 1, \"autoReplyEmailAddresses\": $2, \"endDate\": 1582066800, \"autoReplyText\": \"TXT\", \"startDateEnabled\": 1, \"discardMails\": 1, \"ignoreLists\": 0, \"endDateEnabled\": 1, \"startDate\": 1581894000} ";
+                $sogoSieveVacation = "{\"daysBetweenResponse\": $1, \"enabled\": 1, \"autoReplyEmailAddresses\": $2, \"endDate\": 1582066800, \"autoReplyText\": \"TXT\", \"startDateEnabled\": 1, \"discardMails\": 1, \"ignoreLists\": 0, \"endDateEnabled\": 1, \"startDate\": 1581894000} ";
             }    
             next;        
         } 
         if($row =~ /^vacation :days (.*) text:/) {
             $vacationMode="true";
             if ( $sogoSieveVacation eq "" ) {
-                $sogoSieveVacation = "vacation: {\"daysBetweenResponse\": $1, \"enabled\": 1, \"endDate\": 1582066800, \"autoReplyText\": \"TXT\", \"startDateEnabled\": 1, \"discardMails\": 1, \"ignoreLists\": 0, \"endDateEnabled\": 1, \"startDate\": 1581894000} ";
+                $sogoSieveVacation = "{\"daysBetweenResponse\": $1, \"enabled\": 1, \"endDate\": 1582066800, \"autoReplyText\": \"TXT\", \"startDateEnabled\": 1, \"discardMails\": 1, \"ignoreLists\": 0, \"endDateEnabled\": 1, \"startDate\": 1581894000} ";
             }    
             next;        
         }         
@@ -276,63 +319,110 @@ sub convertRules($) {
     my $in = shift;
     my $rules = "";
     my @entities = split(/, /, $in);
-    my $new2;my $new1;
+    my $operator = "";
+    my $field = "";
+    my $value = "";
     for(@entities) {
-        if($_ =~ /\s*not header\s+:(matches|contains|is|regex|)\s+"([^"]+)"\s+"([^"]+)"\s*/) {
-            $new1 = $1."_not";
-            if($rules eq "") {
-                $rules .= "{\"operator\": \"$new1\", \"field\": \"" . $2 . "\", \"value\": \"$3\"}";
-            }else {
-                $rules .= ",{\"operator\": \"$1\", \"field\": \"" . lc($2) . "\", \"value\": \"$3\"}";    
-            } 
-        }elsif($_ =~ /\s*header\s+:(matches|contains|is|regex|)\s+"([^"]+)"\s+"([^"]+)"\s*/) {
-            if($rules eq "") {
-                $rules .= "{\"operator\": \"$1\", \"field\": \"" . $2 . "\", \"value\": \"$3\"}";
-            }else {
-                $rules .= ",{\"operator\": \"$1\", \"field\": \"" . lc($2) . "\", \"value\": \"$3\"}";    
+        if($_ =~ /\s*not header\s+:(matches|contains|is|regex)\s+"([^"]+)"\s+"([^"]+)"\s*/) {
+            $operator = $1."_not";
+            $field = $2;
+            $value = $3;
+            if($2 =~ /\s*(subject|to_or_cc|from|to|cc)/){
+                if($rules eq "") {
+                    $rules .= "{\"field\": \"".$field."\", \"operator\": \"$operator\", \"value\": \"$value\"}";
+                }else {
+                    $rules .= ",{\"field\": \"".$field."\", \"operator\": \"$operator\", \"value\": \"$value\"}";    
+                } 
+            }else{
+                if($rules eq "") {
+                    $rules .= "{\"field\": \"header\", \"operator\": \"$operator\", \"custom_header\": \"".$field."\", \"value\": \"$value\"}";
+                }else {
+                    $rules .= ",{\"field\": \"header\", \"operator\": \"$operator\", \"custom_header\": \"".$field."\", \"value\": \"$value\"}";
+                } 
+            }
+            #{"field": "header", "operator": "contains", "custom_header": "Delivered-To", "value": "fdsgfdsgdfsgh"}
+        }elsif($_ =~ /\s*header\s+:(matches|contains|is|regex)\s+"([^"]+)"\s+"([^"]+)"\s*/) {
+            $operator = $1;
+            $field = $2;
+            $value = $3;
+
+            if($2 =~ /\s*(subject|to_or_cc|from|to|cc)/){
+                if($rules eq "") {
+                    $rules .= "{\"field\": \"".$field."\", \"operator\": \"$operator\", \"value\": \"$value\"}";
+                }else {
+                    $rules .= ",{\"field\": \"".$field."\", \"operator\": \"$operator\", \"value\": \"$value\"}";    
+                } 
+            }else{
+                if($rules eq "") {
+                    $rules .= "{\"field\": \"header\", \"operator\": \"$operator\", \"custom_header\": \"".$field."\", \"value\": \"$value\"}";
+                }else {
+                    $rules .= ",{\"field\": \"header\", \"operator\": \"$operator\", \"custom_header\": \"".$field."\", \"value\": \"$value\"}";
+                } 
             }
         }elsif($_ =~ /size :(over|under) (.*)/) {
             if($rules eq "") {
-                $rules .= "{\"operator\": \"size\", \"field\": \"" . $1 . "\", \"value\": \"$2\"}";
+                $rules .= "{\"field\": \"size\", \"operator\": \"$1\", \"value\": \"$2\"}";
             }else {
-                $rules .= ",{\"operator\": \"size\", \"field\": \"" . $1 . "\", \"value\": \"$2\"}";    
+                $rules .= ",{\"field\": \"size\", \"operator\": \"$1\", \"value\": \"$2\"}";    
             }
-        }elsif ($_ =~ /\s*not address\s+:(matches|contains|is|)\s+(.+)\s+"\(?(.*)\)?"\s*/) {
-            $new1 = $1."_not";
-            $new2 = $2 ; 
-            if ( "$2" eq "\"from\""){
-                $new2 = "from";
+        }elsif($_ =~ /not body :text :(matches|contains|is|regex) (.*)/) {
+            $operator = $1."_not";
+            $value = $2;
+            if($rules eq "") {
+                $rules .= "{\"field\": \"body\", \"operator\": \"$operator\", \"value\": \"$value\"}";
+            }else {
+                $rules .= ",{\"field\": \"body\", \"operator\": \"$operator\", \"value\": \"$value\"}";    
+            }                
+        }elsif($_ =~ /body :text :(matches|contains|is|regex) (.*)/) {
+            $operator = $1;
+            $value = $2;
+            if($rules eq "") {
+                $rules .= "{\"field\": \"body\", \"operator\": \"$operator\", \"value\": \"$value\"}";
+            }else {
+                $rules .= ",{\"field\": \"body\", \"operator\": \"$operator\", \"value\": \"$value\"}";    
+            }               
+        }elsif ($_ =~ /\s*not address\s+:(matches|contains|is)\s+(.+)\s+"\(?(.*)\)?"\s*/) {
+            $operator = $1."_not";
+            $field = $2 ; 
+            $value = $3;
+
+            if ( "$field" eq "\"from\""){
+                $field = "from";
             }
-            if ( "$2" eq "\"to\""){
-                $new2 = "to";
+            if ( "$field" eq "\"to\""){
+                $field = "to";
             }
-            if ( "$2" eq "[\"to\",\"cc\"]"){
-                $new2 = "to_or_cc";
+            if ( "$field" eq "[\"to\",\"cc\"]"){
+                $field = "to_or_cc";
             }
             if($rules eq "") {
-                $rules .= "{\"operator\": \"$new1\", \"field\": \"" . lc($new2) . "\", \"value\": \"$3\"}";
+                $rules .= "{\"field\": \"".$field."\", \"operator\": \"$operator\", \"value\": \"$value\"}";
             }else {
-                $rules .= ",{\"operator\": \"$new1\", \"field\": \"" . lc($new2) . "\", \"value\": \"$3\"}";    
+                $rules .= ",{\"field\": \"".$field."\", \"operator\": \"$operator\", \"value\": \"$value\"}";    
             }           
-        }elsif ($_ =~ /\s*address\s+:(matches|contains|is|)\s+(.+)\s+"\(?(.*)\)?"\s*/) {
-            $new2 = $2 ; 
-            if ( "$2" eq "\"from\""){
-                $new2 = "from";
+        }elsif ($_ =~ /\s*address\s+:(matches|contains|is)\s+(.+)\s+"\(?(.*)\)?"\s*/) {
+            $operator = $1;
+            $field = $2 ; 
+            $value = $3;
+
+            if ( "$field" eq "\"from\""){
+                $field = "from";
             }
-            if ( "$2" eq "\"to\""){
-                $new2 = "to";
+            if ( "$field" eq "\"to\""){
+                $field = "to";
             }
-            if ( "$2" eq "[\"to\",\"cc\"]"){
-                $new2 = "to_or_cc";
+            if ( "$field" eq "[\"to\",\"cc\"]"){
+                $field = "to_or_cc";
             }
             if($rules eq "") {
-                $rules .= "{\"operator\": \"$1\", \"field\": \"" . lc($new2) . "\", \"value\": \"$3\"}";
+                $rules .= "{\"field\": \"".$field."\", \"operator\": \"$operator\", \"value\": \"$value\"}";
             }else {
-                $rules .= ",{\"operator\": \"$1\", \"field\": \"" . lc($new2) . "\", \"value\": \"$3\"}";    
+                $rules .= ",{\"field\": \"".$field."\", \"operator\": \"$operator\", \"value\": \"$value\"}";    
             }  
         } else {
-            print("!!!!!!!!!!!!!!!!!!!!ERROR: Unknown rule:\n$_\n");
-            return "false";
+            print("!!!!!ERROR: Unknown rule:!!!!!!!!!!!!!!!\n#$_\n");
+            print("# NEXT -> On passe à l'utilisateur suivant\n");
+            exit;
         }
 
         if ($debug eq 1) { print "#Rule : $rules\n"; }
@@ -347,6 +437,24 @@ sub convertAction($$) {
     $argument =~ s/\./\//g;
     my $newarg;
     $newarg = $argument ; 
+    if ( "$argument" =~ "\\Answered"){
+        $newarg = "answered";
+    }
+    if ( "$argument" =~ "\\Deleted"){
+        $newarg = "deleted";
+    }
+    if ( "$argument" =~ "\\Draft"){
+        $newarg = "draft";
+    }
+    if ( "$argument" eq "\\Flagged"){ # pb Syntax U:nrecognized escape \F passed through in regex; 
+        $newarg = "flagged";
+    }
+    if ( "$argument" =~ "Junk"){
+        $newarg = "junk";
+    }
+    if ( "$argument" =~ "NotJunk"){
+        $newarg = "not_junk";
+    }
     if ( "$argument" =~ "\\Seen"){
         $newarg = "seen";
     }
