@@ -45,23 +45,11 @@ if(-e $ARGV[0] && defined $ARGV[1]) {
 
     my $sogoSieve = convert($file);
 
-    # Gestion des fichiers
-    my $filenameoutsieve = "/tmp/sieveimport/".$user."_sieve.json";
-    my $filenameoutvac = "/tmp/sieveimport/".$user."_vacation.json";
-    my $filenameoutfor = "/tmp/sieveimport/".$user."_forward.json";
-    open(my $fro, '>', $filenameoutsieve) or die "Could not open file '$filenameoutsieve' $!";
-    print $fro "{$sogoSieve}";
-    close $fro;
-    open(my $fro2, '>', $filenameoutvac) or die "Could not open file '$filenameoutvac' $!";
-    print $fro2 "$sogoSieveVacation";
-    close $fro2;
-    open(my $fro3, '>', $filenameoutfor) or die "Could not open file '$filenameoutfor' $!";
-    print $fro3 "$sogoSieveForward";
-    close $fro3;
-
-    # Affichage des commandes si besoin
     if ($sogoSieve eq '"SOGoSieveFilters":[]'){    }else {
-
+        my $filenameoutsieve = "/tmp/sieveimport/".$user."_sieve.json";
+        open(my $fro, '>', $filenameoutsieve) or die "Could not open file '$filenameoutsieve' $!";
+        print $fro "{$sogoSieve}";
+        close $fro;
         print("sogo-tool user-preferences set defaults $user -p root.creds SOGoSieveFilters -f $filenameoutsieve");
         print("\n");
         if ($exec eq 1) {
@@ -74,7 +62,12 @@ if(-e $ARGV[0] && defined $ARGV[1]) {
             }
         }
     }
+
     if ($sogoSieveVacation eq ""){    }else {   
+        my $filenameoutvac = "/tmp/sieveimport/".$user."_vacation.json";
+        open(my $fro2, '>', $filenameoutvac) or die "Could not open file '$filenameoutvac' $!";
+        print $fro2 "$sogoSieveVacation";
+        close $fro2;
         print("sogo-tool user-preferences set defaults $user -p root.creds Vacation -f $filenameoutvac");
         print("\n");
         if ($exec eq 1) { 
@@ -87,7 +80,12 @@ if(-e $ARGV[0] && defined $ARGV[1]) {
             }
         }    
     }
+
     if ($sogoSieveForward eq ""){    }else {   
+        my $filenameoutfor = "/tmp/sieveimport/".$user."_forward.json";
+        open(my $fro3, '>', $filenameoutfor) or die "Could not open file '$filenameoutfor' $!";
+        print $fro3 "$sogoSieveForward";
+        close $fro3;
         print("sogo-tool user-preferences set defaults $user -p root.creds Forward -f $filenameoutfor");
         print("\n");
         if ($exec eq 1) { 
@@ -100,6 +98,7 @@ if(-e $ARGV[0] && defined $ARGV[1]) {
             }
         }
     }
+    
     print("\n");
 
 }elsif(-e $ARGV[0]) {
