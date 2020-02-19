@@ -45,7 +45,7 @@ if(-e $ARGV[0] && defined $ARGV[1]) {
     print $fro3 "{$sogoSieveForward}";
     close $fro3;
 
-    print("\nCommandes à executer pour $user: \n");
+    print("\n# Commandes à executer pour $user: \n");
     print("sogo-tool user-preferences set defaults $user -p root.creds SOGoSieveFilters -f $filenameoutsieve");
     print("\n");
     if ($sogoSieveVacation eq ""){    }else {   
