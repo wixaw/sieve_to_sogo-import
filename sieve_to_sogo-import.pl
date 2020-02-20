@@ -257,7 +257,7 @@ sub convert($) {
                 $action ="";
                 $shortname = "";
             }else {
-                $rejectContent .= $row;
+                $rejectContent .= $row."\\n";
             }
             next;
         } 
