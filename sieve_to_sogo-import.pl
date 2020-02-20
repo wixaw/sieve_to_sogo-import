@@ -298,7 +298,7 @@ sub convert($) {
                 # SED to sogoSieveVacation TXT par $vacationMode
                 $sogoSieveVacation =~s/TXT/$vacationContent/ig;   
             }else {
-                $vacationContent .= $row."";
+                $vacationContent .= $row."\\n";
             } 
             next;           
         } 
