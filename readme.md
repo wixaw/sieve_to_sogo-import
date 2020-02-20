@@ -1,22 +1,20 @@
 # Sieve_to_SOGo sieve import
+- These scripts import old sieve <toolname> .script files and integrate them with SOGo. It works with smartsieve
+- To customize for your configurations :)
 
-- Ces scripts permettent d'importer d'ancien fichier sieve, générer avec smartsieve par exemple et de les integrer à SOGo.
-- A customiser selon vos configurations :) 
+## Description 
+- The sieve directory is parsed by a bash script.
+- For each user to find, it executes "sieve_to_sogo-import.pl smartsieve.script $username"
+- Temporary files are created in /tmp/sieveimport/ in json format,
+- The SOGo command is to execute or display it is to modify in the script (exec = 0/1)
 
-## Fonctionnement 
-- Exemple avec smartsieve qui génere pour chaque utilisateur un fichier smartsieve.script 
-- Le répertoire de sieve est parser par un script bash. 
-- Pour chaque utilisateur trouver, il execute "sieve_to_sogo-import.pl smartsieve.script $username"
-- Deux fichiers temporaire sont creer dans /tmp/sieveimport/ au format json, 
-- La commande SOGo est executer ou afficher c'est à modifier dans le script
-
-## Migration 
-- Couper l'éditeur de sieve actuel ( dans mon cas smartsieve à desactiver de mon serveur apache)
-- Copier tout le dossier sieve du serveur imapd ( cd /var/lib/imap/sieve/ ; zip -r /tmp/all_sieve.zip ./) 
-- sur le serveur SOGo ( scp /tmp/all_sieve.zip root@sogo:/tmp/ ) 
-- Depuis le serveur SOGo editer et utiliser parser_sieve_folder.sh pour parcourir le répertoire de sieve et procéder à l'import.
-- Le programme par défaut liste les commandes sogo-tool à effectuer et creer les fichiers .json, ceci permet de voir si tout les règles sont bien reconnu auquel cas il faudra, soit modifier le sieve original, soit modifier le perl si c'est trop redondant.
-- Si vous êtes sur, vous pouvez set la variable exec pour executer les commandes sogo-tool
+## Migration exemple 
+- Deactivate the current sieve editor (in our case smartsieve to deactivate from the apache server)
+- Zip the sieve folder of the imapd server (cd /var/lib/imap/sieve/; zip -r /tmp/all_sieve.zip ./)
+- From the IMAPD server send the zip to the SOGo server (scp /tmp/all_sieve.zip root @ sogo:/tmp /)
+- From the SOGo server edit and use parser_sieve_folder.sh to browse the sieve directory and proceed with the import.
+- By default the program lists the sogo-tool commands to perform and create the .json files, this allows to see if all the rules are well recognized in which case it will be necessary either to modify the original sieve, or to modify the perl if it is too redundant.
+- If you are sure, you can set the exec variable to execute the sogo-tool commands
 
 ```
 yum install unzip git
@@ -45,6 +43,6 @@ perl sieve_to_sogo-import.pl opt/oldsieve/t/toto/smartsieve.script toto # Creer 
 
 ```
 
-## Probleme connu
-- Si dans le fichier sieve.script, si un argument comme un sujet de mail contient une virgule, le split ne fonctionne pas. et donc la règle est en erreur. La solution est d'enlever celle ci et de la rajouter au fichier json une fois créer.
-- J'ai eu à faire à quelques fichiers .script qui semblaient être compilé 
+## Known issue 
+- In the sieve.script file, if an argument like a mail subject contains a comma, the split does not work. The rule is in error. The solution is to remove this one and add it to the json file once created.
+- I had to deal with a few .script files which seemed to be compiled
